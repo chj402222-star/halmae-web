@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <!-- bundle2 M57 (21번) 아이폰 웹 테스트: 세로 꽉 차게 · 노치/홈 바 안전 영역 · 홈 화면에 추가하면 앱처럼 -->
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="할매는 천하제일검">
+    <meta name="theme-color" content="#F9F4F3">
+    <title>할매는 천하제일검 (웹 테스트)</title>
+    <link rel="apple-touch-icon" href="TemplateData/icon-192.png">
+    <link rel="icon" href="TemplateData/icon-192.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #F9F4F3; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+      #wrap { position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+              padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+              display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+      #unity-canvas { background: #F9F4F3; display: block; }
+      #intro { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: #F9F4F3; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #logo { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; }   /* 1080×1920 로고 그림 (게임 안 로고 영상의 마지막 장면과 같은 그림) */
+      #start { position: absolute; bottom: calc(env(safe-area-inset-bottom) + 18vh); font: 600 20px/1.4 -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; color: #5b4a44; animation: blink 1.4s ease-in-out infinite; }
+      #bar { position: absolute; bottom: calc(env(safe-area-inset-bottom) + 18vh); left: 50%; transform: translateX(-50%); width: min(60vw, 300px); height: 10px; border-radius: 5px; background: #e8dcd8; overflow: hidden; display: none; }
+      #fill { width: 0%; height: 100%; background: #c8372d; border-radius: 5px; transition: width 0.2s; }
+      #msg { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 16px); text-align: center; font: 14px/1.4 -apple-system, "Apple SD Gothic Neo", sans-serif; color: #8a7a74; }
+      @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    </style>
+  </head>
+  <body>
+    <div id="wrap"><canvas id="unity-canvas" tabindex="-1"></canvas></div>
+    <div id="intro">
+      <img id="logo" src="TemplateData/logo.png" alt="Playwith">
+      <div id="start">화면을 눌러서 시작</div>
+      <div id="bar"><div id="fill"></div></div>
+      <div id="msg">웹 테스트 버전 · 구매는 할 수 없어요</div>
+    </div>
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+      var intro = document.querySelector("#intro");
+      // 화면(안전 영역 안)에 맞춤: 넓은 화면(PC)은 9:16 가운데, 세로로 긴 폰(아이폰 19.5:9 등)은 위아래 꽉 (게임이 긴 화면에 맞춰 배치, 최대 21:9)
+      function fit() {
+        var wrap = document.querySelector("#wrap");
+        var cs = getComputedStyle(wrap);
+        var w = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        var h = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+        var cw = Math.min(w, h * 9 / 16), ch = Math.min(h, cw * 21 / 9);
+        canvas.style.width = Math.floor(cw) + "px";
+        canvas.style.height = Math.floor(ch) + "px";
+      }
+      window.addEventListener("resize", fit);
+      fit();
+
+      var buildUrl = "Build";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/Halmae-web.data.unityweb",
+        frameworkUrl: buildUrl + "/Halmae-web.framework.js.unityweb",
+        codeUrl: buildUrl + "/Halmae-web.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "할매는 천하제일검",
+        productVersion: "1.0",
+        autoSyncPersistentDataPath: true,   // 저장은 브라우저 저장소 (IndexedDB)
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),   // 아이폰 메모리: 화면 배율 2까지
+        showBanner: function (msg, type) { if (type == "error") document.querySelector("#msg").textContent = msg; },
+      };
+
+      // 아이폰은 터치한 뒤에만 소리가 나므로 첫 화면에서 눌러야 시작 (로고 배경색 + 간단한 진행 표시)
+      var started = false;
+      function start() {
+        if (started) return;
+        started = true;
+        document.querySelector("#start").style.display = "none";
+        document.querySelector("#bar").style.display = "block";
+        var script = document.createElement("script");
+        script.src = buildUrl + "/Halmae-web.loader.js";
+        script.onload = function () {
+          createUnityInstance(canvas, config, function (progress) {
+            document.querySelector("#fill").style.width = Math.round(100 * progress) + "%";
+          }).then(function (unityInstance) {
+            intro.style.transition = "opacity 0.35s";
+            intro.style.opacity = "0";
+            setTimeout(function () { intro.style.display = "none"; }, 400);
+          }).catch(function (message) {
+            document.querySelector("#msg").textContent = "불러오지 못했어요: " + message;
+          });
+        };
+        document.body.appendChild(script);
+      }
+      intro.addEventListener("click", start);
+      intro.addEventListener("touchend", function (e) { e.preventDefault(); start(); });
+    </script>
+  </body>
+</html>
